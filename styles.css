@@ -1,0 +1,212 @@
+/* styles.css - Cute Valentine single page app */
+
+:root{
+  --bg1: #ffeef2;
+  --bg2: #fff7f9;
+  --accent: #ff4d7e;
+  --accent-2: #ff90b3;
+  --muted: #8a5a66;
+  --card-bg: rgba(255,255,255,0.9);
+  --shadow: 0 10px 30px rgba(142, 45, 90, 0.12);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: "Baloo 2", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  background: radial-gradient(circle at 10% 10%, #fff0f4 0%, transparent 30%), linear-gradient(180deg,var(--bg1),var(--bg2));
+  color:#3b212b;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+.container{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:2rem;
+}
+
+.card{
+  width:100%;
+  max-width:420px;
+  position:relative;
+  background:var(--card-bg);
+  border-radius:24px;
+  padding:2.25rem 1.75rem;
+  box-shadow:var(--shadow);
+  text-align:center;
+  overflow:hidden;
+}
+
+h1{
+  margin:0 0 .45rem 0;
+  font-size:1.75rem;
+  color:var(--accent);
+  letter-spacing:0.5px;
+}
+
+.subtext{
+  margin:0 0 1.5rem 0;
+  color:var(--muted);
+  font-size:0.95rem;
+}
+
+/* Buttons area - we'll use relative so the "No" button can move */
+.buttons{
+  position:relative;
+  height:96px; /* keeps space for movement */
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:1rem;
+}
+
+.btn{
+  appearance:none;
+  border:0;
+  padding:0.9rem 1.5rem;
+  border-radius:999px;
+  font-size:1.05rem;
+  cursor:pointer;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+  transition:transform .14s ease, box-shadow .14s ease;
+}
+
+.btn:focus{
+  outline:3px solid rgba(255,77,126,.16);
+  outline-offset:3px;
+}
+
+.btn:active{transform:translateY(2px)}
+
+.yes{
+  color:white;
+  background:linear-gradient(180deg,var(--accent),var(--accent-2));
+}
+
+/* The 'No' button will be positioned absolutely inside .buttons so it can move. */
+.no{
+  position:absolute;
+  right:8px;
+  top:50%;
+  transform:translateY(-50%);
+  background:transparent;
+  color:var(--accent);
+  border:2px solid rgba(255,77,126,0.12);
+  min-width:84px;
+}
+
+/* Shy wobble animation */
+@keyframes shyWobble{
+  0%{transform: translateY(-50%) rotate(0deg)}
+  25%{transform: translateY(-52%) rotate(-6deg)}
+  50%{transform: translateY(-50%) rotate(6deg)}
+  75%{transform: translateY(-48%) rotate(-4deg)}
+  100%{transform: translateY(-50%) rotate(0deg)}
+}
+
+.no.shy{
+  animation: shyWobble 520ms ease;
+  transition: transform .14s ease;
+}
+
+/* floating hearts background */
+.floating-hearts{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+}
+
+.heart{
+  --size: 22px;
+  width:var(--size);
+  height:var(--size);
+  position:absolute;
+  left: calc(var(--i) * 16% + 6%);
+  bottom: -10px;
+  transform: rotate(-45deg) scale(.75);
+  background:linear-gradient(180deg,#ff9ab0,#ff5a86);
+  border-radius: 4px 4px 0 0;
+  filter:drop-shadow(0 2px 6px rgba(142,45,90,0.08));
+  opacity:0.9;
+}
+.heart::before,
+.heart::after{
+  content:'';
+  position:absolute;
+  width:var(--size);
+  height:var(--size);
+  background:inherit;
+  border-radius:50%;
+}
+.heart::before{ top:-50%; left:0 }
+.heart::after{ left:50%; top:0 }
+
+/* floating animation */
+@keyframes floatUp{
+  from{transform: translateY(0) rotate(-45deg) scale(0.8); opacity:0}
+  10%{opacity:1}
+  to{transform: translateY(-180px) rotate(-45deg) scale(1); opacity:0}
+}
+
+.heart{ animation: floatUp 6s linear infinite;}
+.heart:nth-child(2){ animation-duration:7.2s; animation-delay:0.8s }
+.heart:nth-child(3){ animation-duration:5.6s; animation-delay:1.2s}
+.heart:nth-child(4){ animation-duration:6.8s; animation-delay:0.2s}
+.heart:nth-child(5){ animation-duration:7.6s; animation-delay:1.6s}
+.heart:nth-child(6){ animation-duration:5.2s; animation-delay:0.4s}
+
+/* Celebration styles */
+.celebration{
+  margin-top: 1rem;
+}
+
+.big-heart{
+  width:110px;
+  height:110px;
+  margin: 0.6rem auto 0;
+  position:relative;
+  display:block;
+  transform: rotate(-45deg) scale(0.8);
+  background:linear-gradient(180deg,#ff9ab0,#ff4d7e);
+  border-radius:6px 6px 0 0;
+}
+.big-heart::before,.big-heart::after{
+  content:''; position:absolute; width:110px; height:110px; border-radius:50%; background:inherit;
+}
+.big-heart::before{ top:-55px }
+.big-heart::after{ left:55px }
+
+@keyframes heartBounce{
+  0%{transform: scale(.8) rotate(-45deg)}
+  30%{transform: scale(1.05) rotate(-45deg)}
+  50%{transform: scale(.95) rotate(-45deg)}
+  100%{transform: scale(1) rotate(-45deg)}
+}
+
+.big-heart.bounce{ animation: heartBounce 900ms ease-out both }
+
+/* Confetti pieces */
+.confetti{
+  position:fixed;
+  width:10px; height:14px;
+  opacity:0.95;
+  z-index:9999;
+  pointer-events:none;
+  transform-origin:center;
+  border-radius:2px;
+}
+@keyframes confettiFall{
+  0%{transform: translateY(-10vh) rotate(0deg); opacity:1}
+  100%{transform: translateY(110vh) rotate(720deg); opacity:0}
+}
+
+/* Small responsive tweaks */
+@media (max-width:420px){
+  h1{font-size:1.45rem}
+  .card{padding:1.6rem}
+  .buttons{height:84px}
+}

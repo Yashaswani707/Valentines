@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Will you be my Valentine?</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Playful font -->
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <main class="container">
+    <section class="card" id="card" role="region" aria-labelledby="heading">
+      <div class="floating-hearts" aria-hidden="true">
+        <span class="heart" style="--i:0"></span>
+        <span class="heart" style="--i:1"></span>
+        <span class="heart" style="--i:2"></span>
+        <span class="heart" style="--i:3"></span>
+        <span class="heart" style="--i:4"></span>
+        <span class="heart" style="--i:5"></span>
+      </div>
+
+      <h1 id="heading">Will you be my Valentine?</h1>
+      <p class="subtext">I made something cute just for you 💕 — choose wisely!</p>
+
+      <div class="buttons" id="buttonArea">
+        <button id="yesBtn" class="btn yes" aria-label="Yes, I'll be your Valentine">Yes</button>
+        <button id="noBtn" class="btn no" aria-label="No, I don't want to be your Valentine">No</button>
+      </div>
+
+      <div id="celebration" aria-live="polite" class="celebration" hidden></div>
+    </section>
+  </main>
+
+  <script src="script.js" defer></script>
+</body>
+</html>
