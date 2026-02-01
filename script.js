@@ -16,37 +16,78 @@ document.addEventListener('DOMContentLoaded', () => {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
-  // Moves the 'No' button to a random position inside buttonArea without going off-screen
+  // Move the 'No' button away from the Yes button (keeps it within the container)
   function moveNoButton() {
     if (shyCount >= maxShy) return; // stops moving after enough tries
 
     const areaRect = buttonArea.getBoundingClientRect();
     const btnRect = noBtn.getBoundingClientRect();
+    const yesRect = yesBtn.getBoundingClientRect();
 
-    // Calculate available space inside button area where the button can be placed
     const padding = 8; // small padding so it doesn't touch edge
-    const maxLeft = Math.max(areaRect.width - btnRect.width - padding, padding);
-    const maxTop = Math.max(areaRect.height - btnRect.height - padding, padding);
-
-    // On small screens, make movements more subtle (less jumpy)
     const smallScreen = areaRect.width < 420;
-    const left = rnd(padding, Math.max(padding, Math.floor(maxLeft * (smallScreen ? 0.8 : 1))));
-    const top = rnd(padding, Math.max(padding, Math.floor(maxTop * (smallScreen ? 0.55 : 0.9))));
 
-    // Apply position - we use absolute positioning set in CSS
-    noBtn.style.left = `${left}px`;
-    noBtn.style.top = `${top + (btnRect.height/2)}px`; // we store top as centered offset in CSS transform
-    // Because CSS positions from top:50% and transform translateY(-50%), we normalize by adding half of height
+    // Centers relative to the buttonArea (so we can position using left/top inside it)
+    const yesCenter = {
+      x: yesRect.left + yesRect.width / 2 - areaRect.left,
+      y: yesRect.top + yesRect.height / 2 - areaRect.top
+    };
 
-    // Add a short shy wobble animation
+    const noCenter = {
+      x: btnRect.left + btnRect.width / 2 - areaRect.left,
+      y: btnRect.top + btnRect.height / 2 - areaRect.top
+    };
+
+    // Vector from yes -> no. If too small, pick a random direction so it can run.
+    let vx = noCenter.x - yesCenter.x;
+    let vy = noCenter.y - yesCenter.y;
+    if (Math.hypot(vx, vy) < 8) {
+      const ang = Math.random() * Math.PI * 2;
+      vx = Math.cos(ang);
+      vy = Math.sin(ang);
+    }
+
+    // Normalize vector
+    const len = Math.hypot(vx, vy);
+    vx /= len; vy /= len;
+
+    // How far to jump (smaller on small screens)
+    const moveDist = Math.min(areaRect.width, areaRect.height) * (smallScreen ? 0.35 : 0.6);
+    let targetX = noCenter.x + vx * moveDist;
+    let targetY = noCenter.y + vy * moveDist;
+
+    // Clamp so the center stays within the area boundaries (account for half button size)
+    const halfW = btnRect.width / 2;
+    const halfH = btnRect.height / 2;
+    targetX = Math.max(halfW + padding, Math.min(areaRect.width - halfW - padding, targetX));
+    targetY = Math.max(halfH + padding, Math.min(areaRect.height - halfH - padding, targetY));
+
+    // Ensure it's at a safe distance from the Yes button; otherwise push to the farthest corner
+    const minDist = Math.min(areaRect.width, areaRect.height) * (smallScreen ? 0.25 : 0.35);
+    const dToYes = Math.hypot(targetX - yesCenter.x, targetY - yesCenter.y);
+    if (dToYes < minDist) {
+      const corners = [
+        {x: halfW + padding, y: halfH + padding},
+        {x: areaRect.width - halfW - padding, y: halfH + padding},
+        {x: halfW + padding, y: areaRect.height - halfH - padding},
+        {x: areaRect.width - halfW - padding, y: areaRect.height - halfH - padding}
+      ];
+      corners.sort((a,b)=> Math.hypot(b.x - yesCenter.x, b.y - yesCenter.y) - Math.hypot(a.x - yesCenter.x, a.y - yesCenter.y));
+      targetX = corners[0].x;
+      targetY = corners[0].y;
+    }
+
+    // Apply position (we set left to targetX - halfW so the button's left aligns correctly)
+    noBtn.style.left = `${Math.round(targetX - halfW)}px`;
+    // Store the center Y position directly; CSS translateY(-50%) will center the button vertically
+    noBtn.style.top = `${Math.round(targetY)}px`;
+
+    // Add shy wobble animation and bump the counter
     noBtn.classList.remove('shy');
-    // Force reflow to restart animation
     void noBtn.offsetWidth;
     noBtn.classList.add('shy');
 
     shyCount++;
-
-    // If it's calmed down, show subtle hint after last try
     if (shyCount === maxShy) {
       noBtn.setAttribute('title', 'Okay, you can click me now 😌');
     }
@@ -67,16 +108,34 @@ document.addEventListener('DOMContentLoaded', () => {
     moveNoButton();
   }, {passive:false});
 
-  // As a fallback, also make the entire buttonArea chase the finger a bit when pointer moves close
+  // Make the No button run away when the pointer/finger is near the Yes button
   buttonArea.addEventListener('mousemove', (e) => {
     if (celebrationOpen) return;
-    // If cursor is very near the No button, move it
-    const rect = noBtn.getBoundingClientRect();
-    const tolerance = 90; // px
-    if (Math.abs(e.clientX - (rect.left + rect.width / 2)) < tolerance && Math.abs(e.clientY - (rect.top + rect.height / 2)) < tolerance) {
+    const yesRect = yesBtn.getBoundingClientRect();
+    const yesCenterX = yesRect.left + yesRect.width / 2;
+    const yesCenterY = yesRect.top + yesRect.height / 2;
+    const dist = Math.hypot(e.clientX - yesCenterX, e.clientY - yesCenterY);
+    const tolerance = 120; // px
+    if (dist < tolerance) {
       moveNoButton();
     }
   });
+
+  // For touch devices: if a touch starts near the Yes button, make the No button run away
+  buttonArea.addEventListener('touchstart', (e) => {
+    if (celebrationOpen) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    const yesRect = yesBtn.getBoundingClientRect();
+    const yesCenterX = yesRect.left + yesRect.width / 2;
+    const yesCenterY = yesRect.top + yesRect.height / 2;
+    const dist = Math.hypot(touch.clientX - yesCenterX, touch.clientY - yesCenterY);
+    const tolerance = 120;
+    if (dist < tolerance) {
+      e.preventDefault();
+      moveNoButton();
+    }
+  }, {passive:false});
 
   // Allow keyboard users to activate No (important for accessibility) - after shyCount reached, the button becomes clickable
   noBtn.addEventListener('click', (e) => {
