@@ -96,7 +96,11 @@ h1{
   background:transparent;
   color:var(--accent);
   border:2px solid rgba(255,77,126,0.12);
-  min-width:84px;
+  min-width:64px;
+  padding:0.55rem 0.9rem;
+  font-size:0.95rem;
+  z-index:2;
+  transition: left 320ms cubic-bezier(.2,.9,.3,1), top 320ms cubic-bezier(.2,.9,.3,1);
 }
 
 /* Shy wobble animation */

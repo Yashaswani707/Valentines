@@ -7,16 +7,36 @@ document.addEventListener('DOMContentLoaded', () => {
   const card = document.getElementById('card');
   const celebration = document.getElementById('celebration');
 
-  // Settings for "shy" behavior
+  // Settings for "shy" behavior — keep it moving so user tends to click Yes
   let shyCount = 0;
-  const maxShy = 10; // After 10 tries it calms down and becomes clickable
+  const maxShy = 1000; // large number to keep the No button moving away
 
   // Helper: get a random integer between min and max
   function rnd(min, max){
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
-  // Move the 'No' button away from the Yes button (keeps it within the container)
+  // Helper: check two rects for overlap
+  function rectsOverlap(a, b) {
+    return !(a.left > b.right || a.right < b.left || a.top > b.bottom || a.bottom < b.top);
+  }
+
+  // Place the No button by center coordinates (relative to buttonArea)
+  function setNoAt(xCenter, yCenter) {
+    const areaRect = buttonArea.getBoundingClientRect();
+    const btnRect = noBtn.getBoundingClientRect();
+    const halfW = btnRect.width / 2;
+    const halfH = btnRect.height / 2;
+    const left = Math.round(Math.max(8, Math.min(areaRect.width - btnRect.width - 8, xCenter - halfW)));
+    const top = Math.round(Math.max(halfH + 8, Math.min(areaRect.height - halfH - 8, yCenter)));
+    noBtn.style.left = `${left}px`;
+    noBtn.style.top = `${top}px`;
+    noBtn.classList.remove('shy');
+    void noBtn.offsetWidth;
+    noBtn.classList.add('shy');
+  }
+
+  // Try to move the 'No' button away from the Yes button without overlapping it
   function moveNoButton() {
     if (shyCount >= maxShy) return; // stops moving after enough tries
 
@@ -24,10 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnRect = noBtn.getBoundingClientRect();
     const yesRect = yesBtn.getBoundingClientRect();
 
-    const padding = 8; // small padding so it doesn't touch edge
-    const smallScreen = areaRect.width < 420;
-
-    // Centers relative to the buttonArea (so we can position using left/top inside it)
     const yesCenter = {
       x: yesRect.left + yesRect.width / 2 - areaRect.left,
       y: yesRect.top + yesRect.height / 2 - areaRect.top
@@ -38,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
       y: btnRect.top + btnRect.height / 2 - areaRect.top
     };
 
-    // Vector from yes -> no. If too small, pick a random direction so it can run.
+    // Direction from yes to no
     let vx = noCenter.x - yesCenter.x;
     let vy = noCenter.y - yesCenter.y;
     if (Math.hypot(vx, vy) < 8) {
@@ -47,51 +63,80 @@ document.addEventListener('DOMContentLoaded', () => {
       vy = Math.sin(ang);
     }
 
-    // Normalize vector
+    // Normalize
     const len = Math.hypot(vx, vy);
     vx /= len; vy /= len;
 
-    // How far to jump (smaller on small screens)
-    const moveDist = Math.min(areaRect.width, areaRect.height) * (smallScreen ? 0.35 : 0.6);
-    let targetX = noCenter.x + vx * moveDist;
-    let targetY = noCenter.y + vy * moveDist;
-
-    // Clamp so the center stays within the area boundaries (account for half button size)
+    const smallScreen = areaRect.width < 420;
+    const moveDist = Math.min(areaRect.width, areaRect.height) * (smallScreen ? 0.5 : 0.85);
+    const attempts = 8;
+    const minDist = Math.min(areaRect.width, areaRect.height) * (smallScreen ? 0.3 : 0.4);
     const halfW = btnRect.width / 2;
     const halfH = btnRect.height / 2;
-    targetX = Math.max(halfW + padding, Math.min(areaRect.width - halfW - padding, targetX));
-    targetY = Math.max(halfH + padding, Math.min(areaRect.height - halfH - padding, targetY));
 
-    // Ensure it's at a safe distance from the Yes button; otherwise push to the farthest corner
-    const minDist = Math.min(areaRect.width, areaRect.height) * (smallScreen ? 0.25 : 0.35);
-    const dToYes = Math.hypot(targetX - yesCenter.x, targetY - yesCenter.y);
-    if (dToYes < minDist) {
-      const corners = [
-        {x: halfW + padding, y: halfH + padding},
-        {x: areaRect.width - halfW - padding, y: halfH + padding},
-        {x: halfW + padding, y: areaRect.height - halfH - padding},
-        {x: areaRect.width - halfW - padding, y: areaRect.height - halfH - padding}
-      ];
-      corners.sort((a,b)=> Math.hypot(b.x - yesCenter.x, b.y - yesCenter.y) - Math.hypot(a.x - yesCenter.x, a.y - yesCenter.y));
-      targetX = corners[0].x;
-      targetY = corners[0].y;
+    // Try angle offsets to find a non-overlapping spot
+    for (let i = 0; i < attempts; i++) {
+      const angleOffset = (i - attempts / 2) * (Math.PI / 12);
+      const cos = Math.cos(angleOffset), sin = Math.sin(angleOffset);
+      const tx = noCenter.x + (vx * cos - vy * sin) * moveDist;
+      const ty = noCenter.y + (vx * sin + vy * cos) * moveDist;
+
+      const targetX = Math.max(halfW + 8, Math.min(areaRect.width - halfW - 8, tx));
+      const targetY = Math.max(halfH + 8, Math.min(areaRect.height - halfH - 8, ty));
+
+      const candidateRect = {
+        left: areaRect.left + targetX - halfW,
+        top: areaRect.top + targetY - halfH,
+        right: areaRect.left + targetX + halfW,
+        bottom: areaRect.top + targetY + halfH
+      };
+
+      if (!rectsOverlap(candidateRect, yesRect) && Math.hypot(targetX - yesCenter.x, targetY - yesCenter.y) >= minDist) {
+        setNoAt(targetX, targetY);
+        shyCount++;
+        if (shyCount === maxShy) noBtn.setAttribute('title', 'Okay, you can click me now 😌');
+        return;
+      }
     }
 
-    // Apply position (we set left to targetX - halfW so the button's left aligns correctly)
-    noBtn.style.left = `${Math.round(targetX - halfW)}px`;
-    // Store the center Y position directly; CSS translateY(-50%) will center the button vertically
-    noBtn.style.top = `${Math.round(targetY)}px`;
-
-    // Add shy wobble animation and bump the counter
-    noBtn.classList.remove('shy');
-    void noBtn.offsetWidth;
-    noBtn.classList.add('shy');
-
+    // If no valid spot found, put No at the corner farthest from Yes
+    const corners = [
+      {x: halfW + 8, y: halfH + 8},
+      {x: areaRect.width - halfW - 8, y: halfH + 8},
+      {x: halfW + 8, y: areaRect.height - halfH - 8},
+      {x: areaRect.width - halfW - 8, y: areaRect.height - halfH - 8}
+    ];
+    corners.sort((a, b) => Math.hypot(b.x - yesCenter.x, b.y - yesCenter.y) - Math.hypot(a.x - yesCenter.x, a.y - yesCenter.y));
+    setNoAt(corners[0].x, corners[0].y);
     shyCount++;
-    if (shyCount === maxShy) {
-      noBtn.setAttribute('title', 'Okay, you can click me now 😌');
-    }
+    if (shyCount === maxShy) noBtn.setAttribute('title', 'Okay, you can click me now 😌');
   }
+
+  // Place No initially far from Yes
+  function positionNoInitial() {
+    setTimeout(() => {
+      const areaRect = buttonArea.getBoundingClientRect();
+      const btnRect = noBtn.getBoundingClientRect();
+      const yesRect = yesBtn.getBoundingClientRect();
+      const yesCenter = {
+        x: yesRect.left + yesRect.width / 2 - areaRect.left,
+        y: yesRect.top + yesRect.height / 2 - areaRect.top
+      };
+      const halfW = btnRect.width / 2;
+      const halfH = btnRect.height / 2;
+      const corners = [
+        {x: halfW + 8, y: halfH + 8},
+        {x: areaRect.width - halfW - 8, y: halfH + 8},
+        {x: halfW + 8, y: areaRect.height - halfH - 8},
+        {x: areaRect.width - halfW - 8, y: areaRect.height - halfH - 8}
+      ];
+      corners.sort((a, b) => Math.hypot(b.x - yesCenter.x, b.y - yesCenter.y) - Math.hypot(a.x - yesCenter.x, a.y - yesCenter.y));
+      setNoAt(corners[0].x, corners[0].y);
+    }, 50);
+  }
+
+  // Initialize position right after load
+  positionNoInitial();
 
   // Attach events for mouse and touch
   noBtn.addEventListener('mouseenter', (e) => {
